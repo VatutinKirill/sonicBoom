@@ -68,6 +68,8 @@ functions
         length     0.1752;
         Wgamma     1.4;
         WR         8.314463;
+        nxSteps    20;
+        nySteps    20;
     }
 }
 

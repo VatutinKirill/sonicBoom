@@ -87,54 +87,33 @@ class farFieldPressure
 
 private:
 
-//- Class used for surface merging information
-    class mergeInfo
-    {
-
-    public:
-
-        pointField points;
-        faceList faces;
-        labelList pointsMap;
-
-        //- Clear all storage
-        void clear()
-        {
-            points.clear();
-            faces.clear();
-            pointsMap.clear();
-        }
-    };
-
-    //- Output verbosity
-    static bool verbose_;
-
     //- Tolerance for merging points (fraction of mesh bounding box)
     static scalar mergeTol_;
 
+    //
     scalar infM_;
 
     //
     vector infVel_;
 
     //
-    vector pointA_;
+    point pointA_;
 
     //
-    vector pointB_;
+    point pointB_;
 
     //
-    vector nose_;
+    point nose_;
 
     //
-    scalar length_;
+//    scalar length_;
 
     //
-    scalar beta_;
+//    scalar beta_;
 
-    scalar dSeqByX_;
+//    scalar dSeqByX_;
 
-    scalar new_dSeqByX_;
+//    scalar new_dSeqByX_;
 
 
 protected:
@@ -170,22 +149,15 @@ protected:
         //- Velocity magnitude value at infinity
         scalar infVelMag_;
 
-        //- Mach number value at infinity
-
-
-        //- Smart pointer to file output stream
-        List< autoPtr <OFstream> > farFieldPressureFilePtr_;
-
-        //- Information for merging surfaces
-        List<mergeInfo> mergeList_;
-
 private:
 
         //- Disallow default bitwise copy construct
         farFieldPressure(const farFieldPressure&);
-
+        virtual void pointDistr(const farFieldPressure&);
         //- Disallow default bitwise assignment
         void operator=(const farFieldPressure&);
+        
+
 
 
         //- Write geometry only
@@ -217,16 +189,21 @@ public:
         (
             const word& name,
             const objectRegistry&,
+            const fvMesh&,
             const dictionary& dict
         );
 
     //- Destructor
-    virtual ~farFieldPressure();
+
+        virtual ~farFieldPressure();
 
     // Member Functions
 
         //- Read the farFieldPressure data
         virtual bool read(const dictionary&);
+
+        // 
+        virtual pointField evaluate();
 
         //- Called when time was set at the end of time
         virtual void timeSet();
@@ -235,32 +212,32 @@ public:
         virtual bool write();
 
         //
-        Foam::scalar infVelMag(const vector , const scalar, const scalar , const scalar );
+        scalar infVelMag (vector , const scalar, const scalar , const scalar );
 
         //
-        Foam::scalar beta(const scalar, const scalar, const scalar, const scalar ) const;
-
-
-        //
+        scalar beta(const scalar, const scalar, const scalar, const scalar );
 
 
         //
-        Foam::scalar new_dSeqByX(const vectorField& ) const;
+        scalar dSeqByX(const vector , const scalar , const vector , const vector);
+        
+        //
+        scalar new_dSeqByX(const scalar, const scalar, const scalar, const scalar, const scalar, const scalar);
 
         //
-        Foam::scalar PhiOfEta() const;
+        scalar PhiOfEta( scalar );
 
         //
-        Foam::scalar FoEta() const;
+        scalar  Foam::farFieldPressure::FoEta();
 
-       //
-       Foam::scalar kCoef() const;
+        //
+        scalar kCoef();
 
-       //
-       Foam::scalar k1Coef() const;
+        //
+        scalar k1Coef();
 
-       //
-       scalar deltaP() const;
+        //
+        scalar deltaP();
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

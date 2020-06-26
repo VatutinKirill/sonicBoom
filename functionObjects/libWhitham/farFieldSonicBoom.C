@@ -33,10 +33,10 @@ License
 //sampledSurfaces stuff
 //#include "meshedSurfRef.H"
 #include "IOmanip.H"
-//#include "volPointInterpolation.H"
+#include "volPointInterpolation.H"
 #include "PatchTools.H"
 #include "ListListOps.H"
-//#include "stringListOps.H"
+#include "stringListOps.H"
 #include "surfaceFields.H"
 //#include "addToRunTimeSelectionTable.H"
 
@@ -58,6 +58,33 @@ namespace Foam
 Foam::scalar Foam::farFieldPressure::mergeTol_ = 1e-10;
 
 // * * * * * * * * * * * * * Private Member Functions * * * * * * * * * * * //
+pointField Foam::farFieldPressure::pointDistr
+{
+    // 
+    label nxSteps( readLabel(dict.lookup("nxSteps")) );
+    label nySteps( readLabel(dict.lookup("nySteps")) );
+
+    point xs( farFieldPressure_.lookup("pointA") );
+    point xe( farFieldPressure_.lookup("pointB") );
+    point xn( farFieldPressure_.lookup("nose") );
+
+    // Define the return field
+    pointField res(nxSteps, nySteps, xs, xe, xn);
+
+    point xm( (xe + xs)/2 );
+    point dx( (xe - xs)/ static_cast<scalar>(nxSteps) );
+    point dy( (xn - xm)/ static_cast<scalar>(nySteps) );
+
+    res[0][0] = xs;
+    for (int i=0; i < nxSteps; i++)
+    {
+        for (int j=0; j < nySteps; j++)
+        {
+              res[i][j] = res[0][0] + i*dx + j*dy;
+        }
+    }
+    return res;
+}
 
 Foam::word Foam::farFieldPressure::fieldName(const word& name) const
 {
@@ -65,7 +92,7 @@ Foam::word Foam::farFieldPressure::fieldName(const word& name) const
 }
 
 
-void Foam::farFieldPressure::createFiles()
+//void Foam::farFieldPressure::createFiles()
 
 
 // * * * * * * * * * * * * * * * * Constructors * * * * * * * * * * * * * * //
@@ -81,18 +108,18 @@ Foam::farFieldPressure::farFieldPressure
     functionObject(name),
     name_(name),
     log_(false),
-    outputFormat_(word::null),
-    fieldName_(word::null),
-    pointA_(vector::zero),
-    pointB_ (vector::zero),
-    nose_ (vector::zero),
-    infVel_ (vector::zero),
-    infVelMag (scalar 0),
-    Wgamma_ (scalar 0),
-    WR_ (scalar 0),
-    length_ (scalar 0),
-    dSeqByX_ (scalar 0),
-    new_dSeqByX_ (scalar 0)
+//    outputFormat_(word::null),
+//    fieldName_(word::null),
+//    pointA_(point::zero),
+//    pointB_ (point::zero),
+//    nose_ (point::zero),
+//    infVel_ (vector::zero),
+//    infVelMag (scalar 0),
+//    Wgamma_ (scalar 0),
+//    WR_ (scalar 0),
+//    length_ (scalar 0),
+//    dSeqByX_ (scalar 0),
+//    new_dSeqByX_ (scalar 0)
 
 {
     Info << "in constructor" << nl;
@@ -104,24 +131,27 @@ Foam::farFieldPressure::farFieldPressure
 (
     const word& name,
     const objectRegistry& obr,
+    const fvMesh& mesh,
     const dictionary& dict
 )
 :
     functionObject(name),
     name_(name),
     log_(false),
-    outputFormat_(word::null),
-    fieldName_(word::null),
-    pointA_(vector::zero),
-    pointB_ (vector::zero),
-    nose_ (vector::zero),
-    infVel_ (vector::zero),
-    infVelMag_ (scalar 0),
-    Wgamma_ (scalar 0),
-    WR_ (scalar 0),
-    length_ (scalar 0),
-    dSeqByX_ (scalar 0),
-    new_dSeqByX_ (scalar 0)
+    pointDistr( mesh, dict )
+
+//    outputFormat_(word::null),
+//    fieldName_(word::null),
+//    pointA_(point::zero),
+//    pointB_ (point::zero),
+//    nose_ (point::zero),
+//    infVel_ (vector::zero),
+//    infVelMag_ (scalar 0),
+//    Wgamma_ (scalar 0),
+//    WR_ (scalar 0),
+//    length_ (scalar 0),
+//    dSeqByX_ (scalar 0),
+//    new_dSeqByX_ (scalar 0)
 {
     read(dict);
 }
@@ -133,11 +163,11 @@ Foam::farFieldPressure::~farFieldPressure()
 
 // * * * * * * * * * * * * * * * Member Functions * * * * * * * * * * * * * //
 
-bool Foam::soundPressureSampler::read(const dictionary& dict)
+bool Foam::farFieldPressure::read(const dictionary& dict)
 {
     //where should be log info 
     log_ = dict.lookupOrDefault<Switch>("log", false);
-
+/*
     if (!log_)
     {
         Info << "Direct logging to stdio disabled" << endl
@@ -145,25 +175,31 @@ bool Foam::soundPressureSampler::read(const dictionary& dict)
         << "log\t\t true;" << endl
         << "in dictionary" << endl;
     }
+*/
+    point pointA_( dict.lookup("pointA") );
+    //dict.lookup("pointA") >> pointA_;
+    //dict.lookup("pointB") >> pointB_;
+    point pointB_( dict.lookup("pointB") );
+    //dict.lookup("nose") >> nose_;
+    point nose_( dict.lookup("nose") );
 
-    dict.lookup("pointA") >> pointA_;
-    dict.lookup("pointB") >> pointB_;
-    dict.lookup("nose") >> nose_;
-    dict.lookup("infVel") >> infVel_;
-    dict.lookup("Wgamma") >> Wgamma_;
-    dict.lookup("WR") >> WR_;
-    dict.lookup("length") >> length_;
+    vector infVel_( dict.lookup("infVel") );
+    //dict.lookup("infVel") >> infVel_;
+    scalar Wgamma_( dict.lookup("Wgamma") );
+    //dict.lookup("Wgamma") >> Wgamma_;
+    scalar WR_( dict.lookup("WR") );
+    //dict.lookup("WR") >> WR_;
+    //dict.lookup("length") >> length_;
+    scalar length_( dict.lookup("length") );
+    
     //read mesh
     //const fvMesh& mesh_ = refCast<const fvMesh>(obr_);
 
-    // Ensure all surfaces and merge information are expired
-    expire();
-
-    dict.lookup("fieldName") >> fieldName_;
+//    dict.lookup("fieldName") >> fieldName_;
 
     return true;
 }
-
+/*
 void Foam::soundPressureSampler::makeFile()
 {
     fileName soundPressureSamplerDir;
@@ -183,24 +219,24 @@ void Foam::soundPressureSampler::makeFile()
         mkDir(farFieldPressureDir);
     }
 }
-Foam::scalar infVelMag( infVel_, const scalar Wgamma_, const scalar WR_, const scalar infT_) const
-(
-    scalar infVelMag_;
-)
+*/
+Foam::scalar Foam::farFieldPressure::infVelMag( const vector infVel_, const scalar Wgamma_, const scalar WR_, const scalar infT_)
 {
-    infVelMag_ = sqrt(infVel_&infVel_);
+    scalar infVelMag_ = 0;
+    infVelMag_=sqrt(infVel_&infVel_);
+    
     return infVelMag_;
 }
 
-Foam::scalar Foam::farFieldPressure::beta(const scalar infVelMag_, const scalar Wgamma_, const scalar WR_, const scalar infT_) const
+Foam::scalar Foam::farFieldPressure::beta(const scalar infVelMag_, const scalar Wgamma_, const scalar WR_, const scalar infT_)
 {
-    beta_ = infVelMag_*infVelMag_/(Wgamma_*WR_*infT_);
+    scalar beta_ = infVelMag_*infVelMag_/(Wgamma_*WR_*infT_);
     return beta_;
 }
 
-Foam::scalar Foam::farFieldPressure::dSeqByX(const vector infVel_, const scalar beta_, const vector new_pointA_, const vector new_pointB_) const
+Foam::scalar Foam::farFieldPressure::dSeqByX(const vector infVel_, const scalar beta_, const vector new_pointA_, const vector new_pointB_)
 {
-    vector BA = ((new_pointA[0] - new_pointB[0]) (new_pointA[1]-new_pointB[1]) (new_pointA_[2]-new_pointB_[2]));
+/*    vector BA = ((new_pointA[0] - new_pointB[0]) (new_pointA[1]-new_pointB[1]) (new_pointA_[2]-new_pointB_[2]));
     scalar magBA = mag(BA);
     const pointField & pp = mesh.points();
 
@@ -229,42 +265,46 @@ Foam::scalar Foam::farFieldPressure::dSeqByX(const vector infVel_, const scalar 
         }
     }
     scalar dSeqByX_= -2/infVelMag_sumVz;
+*/
+    scalar dSeqByX_ =0;
     return dSeqByX_;
 }
 
-Foam::scalar  Foam::farFieldPressure::new_dSeqByX(const scalar length_, const scalar WR_, const scalar infT_, const scalar beta_, const scalar Wgamma_, const scalar dSeqByX_) const
+Foam::scalar  Foam::farFieldPressure::new_dSeqByX(const scalar length_, const scalar WR_, const scalar infT_, const scalar beta_, const scalar Wgamma_, const scalar dSeqByX_)
 {
-     new_dSeqByX_ = Wgamma_*WR_*Wgamma_*infT_/(2*length_*constant::mathematical::pi*sqrt(2*beta_))*dSeqByX_;
+     scalar new_dSeqByX_ = Wgamma_*WR_*Wgamma_*infT_/(2*length_*constant::mathematical::pi*sqrt(2*beta_))*dSeqByX_;
      return new_dSeqByX_;
 }
-
-Foam::volScalarField Foam::farFieldPressure::PhiOfEta() const
+/*
+Foam::volScalarField Foam::farFieldPressure::PhiOfEta( scalar  new_dSeqByX_)
 {
     scalar PhiOfEta_=0;
     return PhiOfEta_;
 }
 
-Foam::scalar Foam::farFieldPressure::FoEta() const
+Foam::scalar Foam::farFieldPressure::FoEta()
 {
     scalar FoEta_=0;
     return FoEta_;
 }
 
-Foam::scalar Foam::farFieldPressure::kCoef() const
+Foam::scalar Foam::farFieldPressure::kCoef()
 {
     scalar kCoef_=0;
     return kCoef_;
 }
 
-Foam::scalar Foam::farFieldPressure::k1Coef() const
+Foam::scalar Foam::farFieldPressure::k1Coef()
 {
     scalar k1Coef_=0;
     return k1Coef_;
 }
 
-Foam::scalar Foam::farFieldPressure::deltaP() const
+Foam::scalar Foam::farFieldPressure::deltaP()
 {
     scalar deltaP_ = 0;
     return deltaP_;
 }
+*/
+
 // ************************************************************************* //
