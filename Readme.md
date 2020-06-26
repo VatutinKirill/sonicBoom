@@ -1,1 +1,1 @@
-sonicBoom project
+functionObject for sonicBoom project

@@ -24,7 +24,7 @@ License
 \*---------------------------------------------------------------------------*/
 
 
-#include "soundPressureSampler.H"
+#include "farFieldSonicBoom.H"
 #include "volFields.H"
 #include "dictionary.H"
 #include "Time.H"
@@ -32,145 +32,103 @@ License
 
 //sampledSurfaces stuff
 //#include "meshedSurfRef.H"
-//#include "IOmanip.H"
+#include "IOmanip.H"
 //#include "volPointInterpolation.H"
 #include "PatchTools.H"
 #include "ListListOps.H"
 //#include "stringListOps.H"
-//#include "surfaceFields.H"
-#include "addToRunTimeSelectionTable.H"
+#include "surfaceFields.H"
+//#include "addToRunTimeSelectionTable.H"
 
 // * * * * * * * * * * * * * * Static Data Members * * * * * * * * * * * * * //
 
 namespace Foam
 {
-    defineTypeNameAndDebug(farFieldSonicBoom, 0);
+    defineTypeNameAndDebug(farFieldPressure, 0);
 
     addToRunTimeSelectionTable
     (
         functionObject,
-        farFieldSonicBoom,
+        farFieldPressure,
         dictionary
     );
 }
 
 
-Foam::scalar Foam::farFieldSonicBoom::mergeTol_ = 1e-10;
+Foam::scalar Foam::farFieldPressure::mergeTol_ = 1e-10;
 
 // * * * * * * * * * * * * * Private Member Functions * * * * * * * * * * * //
 
-
-void Foam::farfieldSonicBoom::writeGeometry() const
+Foam::word Foam::farFieldPressure::fieldName(const word& name) const
 {
-    const fileName outputDir = "surfaceGeometryData";
-
-    Info << "write geometry \n";
-
-    Info << controlSurfaces_.size() << nl;
-
-
-    forAll(controlSurfaces_, surfI)
-    {
-        Info << "in surfaces list\n";
-
-        const sampledSurface& s = controlSurfaces_.operator[](surfI);
-
-
-        if (Pstream::parRun())
-        {
-            Info << "surfI size = " << mergeList_[surfI].points.size() << nl;
-
-            if (Pstream::master() && mergeList_[surfI].faces.size())
-            {
-                formatter_->write
-                (
-                    outputDir,
-                    s.name(),
-                    meshedSurfRef
-                    (
-                        mergeList_[surfI].points,
-                        mergeList_[surfI].faces
-                    )
-                );
-            }
-        }
-        else if (s.points().size())
-        {
-            Info << s.points().size() << nl;
-
-            formatter_->write
-            (
-                outputDir,
-                s.name(),
-                meshedSurfRef
-                (
-                    s.points(),
-                    s.faces()
-                )
-            );
-        }
-        else
-        {
-            Info << "empty surface info" << nl;
-        }
-    }
+    return this->name() + ":" + name;
 }
 
+
+void Foam::farFieldPressure::createFiles()
 
 
 // * * * * * * * * * * * * * * * * Constructors * * * * * * * * * * * * * * //
 
-Foam::farFieldSonicBoom::farFieldSonicBoom
+Foam::farFieldPressure::farFieldPressure
 (
     const word& name,
     const Time& t,
+    const volVectorField& U,
     const dictionary& dict
 )
 :
     functionObject(name),
-    mesh_
-    (
-        refCast<const fvMesh>
-        (
-            t.lookupObject<objectRegistry>
-            (
-                dict.lookupOrDefault("region", polyMesh::defaultRegion)
-            )
-        )
-    ),
-    loadFromFiles_(false),
     name_(name),
     log_(false),
-    controlSurfaces_(0),
     outputFormat_(word::null),
-    fieldName_(word::null)
+    fieldName_(word::null),
+    pointA_(vector::zero),
+    pointB_ (vector::zero),
+    nose_ (vector::zero),
+    infVel_ (vector::zero),
+    infVelMag (scalar 0),
+    Wgamma_ (scalar 0),
+    WR_ (scalar 0),
+    length_ (scalar 0),
+    dSeqByX_ (scalar 0),
+    new_dSeqByX_ (scalar 0)
+
 {
     Info << "in constructor" << nl;
 
     read(dict);
 }
 
-Foam::farFieldSonicBoom::farFieldSonicBoom
+Foam::farFieldPressure::farFieldPressure
 (
     const word& name,
     const objectRegistry& obr,
-    const dictionary& dict,
-    const bool loadFromFiles
+    const dictionary& dict
 )
 :
     functionObject(name),
     name_(name),
     log_(false),
-    controlSurfaces_(0),
     outputFormat_(word::null),
-    fieldName_(word::null)
+    fieldName_(word::null),
+    pointA_(vector::zero),
+    pointB_ (vector::zero),
+    nose_ (vector::zero),
+    infVel_ (vector::zero),
+    infVelMag_ (scalar 0),
+    Wgamma_ (scalar 0),
+    WR_ (scalar 0),
+    length_ (scalar 0),
+    dSeqByX_ (scalar 0),
+    new_dSeqByX_ (scalar 0)
 {
     read(dict);
 }
 
 // * * * * * * * * * * * * * * * * Destructor * * * * * * * * * * * * * * * //
 
-Foam::farFieldSonicBoom::~farFieldSonicBoom()
+Foam::farFieldPressure::~farFieldPressure()
 {}
 
 // * * * * * * * * * * * * * * * Member Functions * * * * * * * * * * * * * //
@@ -179,7 +137,7 @@ bool Foam::soundPressureSampler::read(const dictionary& dict)
 {
     //where should be log info 
     log_ = dict.lookupOrDefault<Switch>("log", false);
-    
+
     if (!log_)
     {
         Info << "Direct logging to stdio disabled" << endl
@@ -188,71 +146,18 @@ bool Foam::soundPressureSampler::read(const dictionary& dict)
         << "in dictionary" << endl;
     }
 
-   	dict.lookup("interpolationScheme") >> interpolationScheme_;
-
-	dict.lookup("timeIndexRead") >> timeIndexRead_;
-	dict.lookup("nSnapshots") >> nSnapshots_;
-	dict.lookup("nmodes") >> nmodes_;
-	dict.lookup("poddebug") >> poddebug_;
-	dict.lookup("PODStartTime") >> PODStartTime_;
-
-    const word writeType (dict.lookup("outputGeometryFormat"));
-
+    dict.lookup("pointA") >> pointA_;
+    dict.lookup("pointB") >> pointB_;
+    dict.lookup("nose") >> nose_;
+    dict.lookup("infVel") >> infVel_;
+    dict.lookup("Wgamma") >> Wgamma_;
+    dict.lookup("WR") >> WR_;
+    dict.lookup("length") >> length_;
     //read mesh
     //const fvMesh& mesh_ = refCast<const fvMesh>(obr_);
 
-        // Define the surface formatter
-        // Optionally defined extra controls for the output formats
-        formatter_ = surfaceWriter::New
-        (
-            writeType,
-            dict.subOrEmptyDict("formatOptions").subOrEmptyDict(writeType)
-        );
-
-
-
-    //read surfaces for sampling
-    PtrList<sampledSurface> newList
-    (
-        dict.lookup("surfaces"),
-        sampledSurface::iNew(mesh_)
-    );
-
-    controlSurfaces_.transfer(newList);
-
-    //Parallel fix as it was implemented in sampledSurfaces class
-    if (Pstream::parRun())
-    {
-        mergeList_.setSize(controlSurfaces_.size());
-    }
-        
     // Ensure all surfaces and merge information are expired
     expire();
-
-    if (controlSurfaces_.size())
-    {
-
-        Info<< "Function object "<< name_<<":" << nl;
-
-        Info<< " Reading control surface description:" << nl;
-            
-        forAll(controlSurfaces_, surfI)
-        {
-            Info<< " " << controlSurfaces_.operator[](surfI).name() << nl;
-            Info<< "needsUpdate: " << controlSurfaces_.operator[](surfI).needsUpdate() << nl;
-            Info<< "size: " << controlSurfaces_.operator[](surfI).points().size() << nl;
-        }
-
-        Info<< endl;
-
-        //pHistory_.resize(controlSurfaces_.size());
-
-        update();
-
-        writeGeometry();
-
-        Info << "writeGeometry OK" << nl;
-    }
 
     dict.lookup("fieldName") >> fieldName_;
 
@@ -266,91 +171,100 @@ void Foam::soundPressureSampler::makeFile()
     if (Pstream::master() && Pstream::parRun())
     {
         //farFieldSonicBoomDir = obr_.time().rootPath() + "/" + obr_.time().caseName().path() + "/data" ;
-        farFieldSonicBoomDir = mesh_.time().rootPath() + "/" + mesh_.time().caseName().path() + "/data" ;
+        farFieldPressureDir = mesh_.time().rootPath() + "/" + mesh_.time().caseName().path() + "/data" ;
 
-        mkDir(farFieldSonicBoomDir);
+        mkDir(farFieldPressure);
     }
     else if (!Pstream::parRun())
     {
         //farFieldSonicBoomDir = obr_.time().rootPath() + "/" + obr_.time().caseName() + "/data" ;
-        farFieldSonicBoomDir = mesh_.time().rootPath() + "/" + mesh_.time().caseName() + "/data" ;
+        farFieldPressureDir = mesh_.time().rootPath() + "/" + mesh_.time().caseName() + "/data" ;
 
-        mkDir(farFieldSonicBoomDir);
+        mkDir(farFieldPressureDir);
     }
+}
+Foam::scalar infVelMag( infVel_, const scalar Wgamma_, const scalar WR_, const scalar infT_) const
+(
+    scalar infVelMag_;
+)
+{
+    infVelMag_ = sqrt(infVel_&infVel_);
+    return infVelMag_;
+}
 
-    // File update
-    if (Pstream::master() || !Pstream::parRun())
+Foam::scalar Foam::farFieldPressure::beta(const scalar infVelMag_, const scalar Wgamma_, const scalar WR_, const scalar infT_) const
+{
+    beta_ = infVelMag_*infVelMag_/(Wgamma_*WR_*infT_);
+    return beta_;
+}
+
+Foam::scalar Foam::farFieldPressure::dSeqByX(const vector infVel_, const scalar beta_, const vector new_pointA_, const vector new_pointB_) const
+{
+    vector BA = ((new_pointA[0] - new_pointB[0]) (new_pointA[1]-new_pointB[1]) (new_pointA_[2]-new_pointB_[2]));
+    scalar magBA = mag(BA);
+    const pointField & pp = mesh.points();
+
+    forAll ( mesh.C().internalField(), celli)
     {
-        // Create the soundPressureSampler file if not already created
-        farFieldSonicBoomFilePtr_.resize(controlSurfaces_.size());
+        const cell & cc = mesh.cells()[celli];
+        labelList pLabels(cc.labels(ff));
+        pointField pLocal(pLabels.size(), vector::zero);
+        vector vz= U.component(2);
+        vector BC = ((mech.C()[0]-new_pointB[0])  (mech.C()[2]-new_pointB[2]) 0);
+        scalar distC = mag(BC&BA/magBA);
+        scalar sumVz = 0;
+        forAll (pLabels, pointi)
+            pLobal[pointi] = pp[pLabels[pointi]];
 
-        forAll(controlSurfaces_, surfI)
+        if(Foam::min(pLocal & vector(0,1,0)) < (new_pointB_[1]+new_pointA_[1])/2 && (new_pointB_[1]+new_pointA_[1])/2 < Foam::max(pLocal & vector(0,1,0)))
         {
-            sampledSurface& s = controlSurfaces_.operator[](surfI);
+            scalar ZdimC = mag(Foam::max(pLocal & vector(0,0,1))-Foam::min(pLocal & vector(0,0,1)));
+            scalar XdimC = mag(Foam::max(pLocal & vector(1,0,0))-Foam::min(pLocal & vector(1,0,0)));
+            scalar XZdimC = sqrt(ZdimC*ZdimC+XdimC*XdimC)/2;
 
-            fileName pFileName = soundPressureSamplerDir + "/" + (s.name() + "_" + name_ + ".txt");
-
-            if (isFile(pFileName))
+            if(XZdimC<distC)
             {
-                Info << "File " << pFileName << " is already exists" << nl;
-            }
-
-            if (farFieldSonicBoomFilePtr_[surfI].empty())
-            {
-                // Open new file at start up
-                Info << pFileName << nl;
-
-                farFieldSonicBoomFilePtr_[surfI].reset
-                (
-                    new OFstream
-                    (
-                        pFileName
-                    )
-                );
+               sumVz = sumVz + vx*ZdimC; 
             }
         }
     }
-
-    //write();
+    scalar dSeqByX_= -2/infVelMag_sumVz;
+    return dSeqByX_;
 }
 
-Foam::scalar Foam::farFieldSonicBoom::beta(const scalar Mref)
+Foam::scalar  Foam::farFieldPressure::new_dSeqByX(const scalar length_, const scalar WR_, const scalar infT_, const scalar beta_, const scalar Wgamma_, const scalar dSeqByX_) const
 {
-    
+     new_dSeqByX_ = Wgamma_*WR_*Wgamma_*infT_/(2*length_*constant::mathematical::pi*sqrt(2*beta_))*dSeqByX_;
+     return new_dSeqByX_;
 }
 
-Foam::scalar Foam::farFieldSonicBoom::dSeqByX()
+Foam::volScalarField Foam::farFieldPressure::PhiOfEta() const
 {
-
+    scalar PhiOfEta_=0;
+    return PhiOfEta_;
 }
 
-Foam::scalar Foam::farFieldSonicBoom::new_dSeqByX()
+Foam::scalar Foam::farFieldPressure::FoEta() const
 {
-
+    scalar FoEta_=0;
+    return FoEta_;
 }
 
-Foam::scalar Foam::farFieldSonicBoom::PhiOfEta()
+Foam::scalar Foam::farFieldPressure::kCoef() const
 {
-
+    scalar kCoef_=0;
+    return kCoef_;
 }
 
-Foam::scalar Foam::farFieldSonicBoom::FoEta()
+Foam::scalar Foam::farFieldPressure::k1Coef() const
 {
-
+    scalar k1Coef_=0;
+    return k1Coef_;
 }
 
-Foam::scalar Foam::farFieldSonicBoom::kCoef()
+Foam::scalar Foam::farFieldPressure::deltaP() const
 {
-
-}
-
-Foam::scalar Foam::farFieldSonicBoom::k1Coef()
-{
-
-}
-
-Foam::scalar Foam::farFieldSonicBoom::deltaP()
-{
-
+    scalar deltaP_ = 0;
+    return deltaP_;
 }
 // ************************************************************************* //

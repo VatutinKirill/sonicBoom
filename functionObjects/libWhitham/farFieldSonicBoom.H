@@ -30,8 +30,6 @@ Description
     Data are sorted by frequencies.
 
     Input data:
-    -   path to triSurface;
-    -   ...
 
     Output:
     -   file with pressure history.
@@ -61,8 +59,8 @@ SourceFiles
 
 //control surfaces stuff (!)
 #include "functionObject.H"
-#include "sampledSurface.H"
-#include "surfaceWriter.H"
+//#include "sampledSurface.H"
+//#include "surfaceWriter.H"
 #include "surfaceFieldsFwd.H"
 #include "wordReList.H"
 #include "IOobjectList.H"
@@ -78,10 +76,10 @@ class fvMesh;
 class dictionary;
 
 /*---------------------------------------------------------------------------*\
-                    Class farFieldSonicBoomSampler Declaration
+                    Class farFieldPressure Declaration
 \*---------------------------------------------------------------------------*/
 
-class farFieldSonicBoom
+class farFieldPressure
 :
     public functionObject
 {
@@ -114,6 +112,31 @@ private:
     //- Tolerance for merging points (fraction of mesh bounding box)
     static scalar mergeTol_;
 
+    scalar infM_;
+
+    //
+    vector infVel_;
+
+    //
+    vector pointA_;
+
+    //
+    vector pointB_;
+
+    //
+    vector nose_;
+
+    //
+    scalar length_;
+
+    //
+    scalar beta_;
+
+    scalar dSeqByX_;
+
+    scalar new_dSeqByX_;
+
+
 protected:
 
     // Private data
@@ -134,48 +157,39 @@ protected:
         //- Switch to send output to Info as well as to file
         Switch log_;
 
-
-        //- Interpolation scheme to use for sampling
-        word interpolationScheme_;
-
-        //- List of control surfaces
-        PtrList<sampledSurface> controlSurfaces_;
-
-        //- Output format for surface geometry writing
-        word outputFormat_;
-
-        //- Writer for surface geometry
-        autoPtr<surfaceWriter> formatter_;
-
         //- Name of pressure field
         word fieldName_;
 
+        //
+        scalar Wgamma_;
+
+        //
+        scalar WR_;
+
+
         //- Velocity magnitude value at infinity
-        scalar magURef_;
+        scalar infVelMag_;
 
         //- Mach number value at infinity
-        scalar MRef_;
+
 
         //- Smart pointer to file output stream
-        List< autoPtr <OFstream> > farFieldSonicBoomFilePtr_;
+        List< autoPtr <OFstream> > farFieldPressureFilePtr_;
 
         //- Information for merging surfaces
         List<mergeInfo> mergeList_;
 
-        //- Number of probe
-        label probeI_;
-
 private:
 
         //- Disallow default bitwise copy construct
-        farFieldSonicBoom(const farFieldSonicBoom&);
+        farFieldPressure(const farFieldPressure&);
 
         //- Disallow default bitwise assignment
-        void operator=(const farFieldSonicBoom&);
+        void operator=(const farFieldPressure&);
 
 
         //- Write geometry only
-        void writeGeometry() const;
+//        void writeGeometry() const;
 
 
         //- If the soundPressureSampler file has not been created create it
@@ -185,12 +199,12 @@ private:
 public:
 
     //- Runtime type information
-    TypeName("farFieldSonicBoom");
+    TypeName("farFieldPressure");
 
     // Constructors
 
         //- Construct from Time and dictionary
-        farFieldSonicBoom
+        farFieldPressure
         (
             const word& name,
             const Time& time,
@@ -199,34 +213,54 @@ public:
 
         //- Construct for given objectRegistry and dictionary
         //  allow the possibility to load fields from files
-        farFieldSonicBoom
+        farFieldPressure
         (
             const word& name,
             const objectRegistry&,
-            const dictionary&,
-            const bool loadFromFiles = false
+            const dictionary& dict
         );
 
     //- Destructor
-    virtual ~farFieldSonicBoom();
+    virtual ~farFieldPressure();
 
     // Member Functions
 
-        //- Return name of the set of soundPressureSampler
-        virtual const word& name() const
-        {
-            return name_;
-        }
-
-        //- Read the farFieldSonicBoom data
+        //- Read the farFieldPressure data
         virtual bool read(const dictionary&);
 
         //- Called when time was set at the end of time
         virtual void timeSet();
 
-        //- Write the farFieldSonicBoom
+        //- Write the farFieldPressure
         virtual bool write();
 
+        //
+        Foam::scalar infVelMag(const vector , const scalar, const scalar , const scalar );
+
+        //
+        Foam::scalar beta(const scalar, const scalar, const scalar, const scalar ) const;
+
+
+        //
+
+
+        //
+        Foam::scalar new_dSeqByX(const vectorField& ) const;
+
+        //
+        Foam::scalar PhiOfEta() const;
+
+        //
+        Foam::scalar FoEta() const;
+
+       //
+       Foam::scalar kCoef() const;
+
+       //
+       Foam::scalar k1Coef() const;
+
+       //
+       scalar deltaP() const;
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //

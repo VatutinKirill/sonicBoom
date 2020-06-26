@@ -1,0 +1,74 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1812                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "system";
+    object      controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+application     QGDFoam;
+
+startFrom       latestTime;
+
+startTime       0;
+
+stopAt          endTime;
+
+endTime         5;
+
+deltaT          1e-6;
+
+writeControl    adjustableRunTime;
+
+writeInterval   1e-2;
+
+purgeWrite      0;
+
+writeFormat     ascii;
+
+writePrecision  10;
+
+writeCompression off;
+
+timeFormat      general;
+
+timePrecision   6;
+
+runTimeModifiable true;
+
+adjustTimeStep  yes;
+
+maxCo           0.25;
+
+functions
+{
+    farFieldPressure
+    {
+        type        farFieldPressure;
+        libs        ("libWhitham.so");
+
+        log         yes;
+//        writeFields yes;
+
+        // input keywords for functionObject
+
+        pointA     (0.3 -0.05 -0.00001);
+        pointB     (0.3 -0.05 -0.00001);
+        nose       (0 0 0);
+        infVel     (202.33 0 0);
+        length     0.1752;
+        Wgamma     1.4;
+        WR         8.314463;
+    }
+}
+
+// ************************************************************************* //
