@@ -1,0 +1,42 @@
+FoamFile
+{
+    version     1912;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      k;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 2 -2 0 0 0 0];
+
+internalField   uniform 37;
+
+boundaryField
+{
+    "(inlet|bottom)"
+    {
+        type            fixedValue;
+        value           $internalField;
+    }
+    "(outlet|top)"
+    {
+        type            inletOutlet;
+        inletValue      $internalField;
+        value           $internalField;
+    }
+
+    "(wing|tail)"
+    {
+        type            kqRWallFunction;
+        value           $internalField;
+    }
+
+    "(sym|back)"
+    {
+        type            slip;
+    }
+}
+// ************************************************************************* //
+

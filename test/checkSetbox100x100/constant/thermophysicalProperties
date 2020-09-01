@@ -1,0 +1,71 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  2.3.0                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.org                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    location    "constant";
+    object      thermophysicalProperties;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+thermoType
+{
+    type            hePsiQGDThermo;
+    mixture         pureMixture;
+    transport       const;
+    thermo          hConst;
+    equationOfState perfectGas;
+    specie          specie;
+    energy          sensibleInternalEnergy;
+}
+
+mixture
+{
+    specie
+    {
+        nMoles        1;
+        molWeight 28.96;
+    }
+    equationOfState
+    {
+        rho 1;
+    }
+    thermodynamics
+    {
+        Hf              0.0;
+        Sf              0.0;
+        Cp              1005;
+ //       Cv              1;
+    }
+    transport
+    {
+        mu              1e-5;
+        Pr              1;
+        beta            0.000;
+    }
+}
+
+QGD
+{
+    implicitDiffusion true;
+    QGDCoeffs constScPrModel1;
+    //QGDCoeffs HbyUQHD;
+    //QGDCoeffs alphaH2bynuQHD;
+
+    constScPrModel1Dict
+    {
+    //    UQHD 10;
+    }
+    //alphaH2bynuQHDDict
+    //{
+    //}
+}
+
+// ************************************************************************* //

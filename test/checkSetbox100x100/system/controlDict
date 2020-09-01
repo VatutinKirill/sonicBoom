@@ -1,0 +1,84 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1812                                 |
+|   \\  /    A nd           | Web:      www.OpenFOAM.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version          1812;
+    format           ascii;
+    class            dictionary;
+    location         "system";
+    object           controlDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+application          QGDFoam;
+
+startFrom            latestTime;
+
+startTime            0;
+
+stopAt               endTime;
+
+endTime              0.02;
+
+deltaT               1e-6;
+
+writeControl         adjustableRunTime;
+
+writeInterval        5e-6;
+
+purgeWrite           0;
+
+writeFormat          ascii;
+
+writePrecision       10;
+
+writeCompression     off;
+
+timeFormat           general;
+
+timePrecision        6;
+
+runTimeModifiable    true;
+
+adjustTimeStep       yes;
+
+maxCo                0.25;
+
+functions
+{
+    farFieldPressure
+    {
+        type        farFieldPressure;
+        libs        ("libWhitham.so");
+
+        // input keywords for functionObject
+
+//        log                    yes;
+        interpolationScheme    cell;
+        fieldName              p;
+
+        nose       ( 0.0    0.0 0.0077 );
+        infVel     ( 202.33 0.0 0.0    );
+        infT       300;
+        length     0.1752;
+        Wgamma     1.4;
+        WR         8.314463;
+        nLines     5;
+
+        baseLine
+        {
+            type       uniform;
+            start      (0.3 -0.05  0.007 );
+            end        (0.3 -0.05  0.0084);
+            axis       xyz;
+            nPoints    4;
+        }
+    }
+}
+
+// ************************************************************************* //

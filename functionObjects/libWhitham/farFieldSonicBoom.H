@@ -50,18 +50,19 @@ SourceFiles
 #include "Tuple2.H"
 #include "OFstream.H"
 #include "Switch.H"
+
+#include "probes.H"
 #include "pointFieldFwd.H"
 
 #include "polyMesh.H"
 #include "mapPolyMesh.H"
 
 #include "volFields.H"
+#include "passiveParticleCloud.H"
 
-//control surfaces stuff (!)
 #include "functionObject.H"
-//#include "sampledSurface.H"
-//#include "surfaceWriter.H"
-#include "surfaceFieldsFwd.H"
+#include "sampledSet.H"
+
 #include "wordReList.H"
 #include "IOobjectList.H"
 
@@ -69,9 +70,8 @@ SourceFiles
 
 namespace Foam
 {
-
 // Forward declaration of classes
-class Time;
+
 class fvMesh;
 class dictionary;
 
@@ -84,89 +84,120 @@ class farFieldPressure
     public functionObject
 {
 
-
 private:
+
+    //- Class used for sampling volFields
+    template<class Type>
+    class volFieldSampler
+    :
+        public List<Field<Type>>
+    {
+        //- Name of this collection of values
+        const word name_;
+
+    public:
+
+        //- Construct interpolating field to the sampleSets
+        volFieldSampler
+        (
+            const word& interpolationScheme,
+            const GeometricField<Type, fvPatchField, volMesh>& field,
+            const PtrList<sampledSet>&
+        );
+
+        //- Return the field name
+        const word& name() const
+        {
+            return name_;
+        }
+    };
 
     //- Tolerance for merging points (fraction of mesh bounding box)
     static scalar mergeTol_;
-
-    //
-    scalar infM_;
-
-    //
-    vector infVel_;
-
-    //
-    point pointA_;
-
-    //
-    point pointB_;
-
-    //
-    point nose_;
-
-    //
-//    scalar length_;
-
-    //
-//    scalar beta_;
-
-//    scalar dSeqByX_;
-
-//    scalar new_dSeqByX_;
-
 
 protected:
 
     // Private data
 
-        //- Const reference to fvMesh
-        const fvMesh& mesh_;
+    //- Const reference to fvMesh
+    const fvMesh& mesh_;
+    
+    //
+//    const bool loadFromFiles;
 
-        //- Load fields from files (not from objectRegistry)
-        const bool loadFromFiles_;
+    //- Interpolation scheme to use for sampling
+    word interpolationScheme_;
 
-        //- Name of this set of soundPressureSampler,
-        // Also used as the name of the probes directory.
-        word name_;
+    // Also used as the name of the probes directory.
+    word name_;
 
-        //- Standard OpenFOAM object registry
-        //const objectRegistry& obr_;
+    //- glogal string to keep directory name for any output
+    std::string dirName_;
 
-        //- Switch to send output to Info as well as to file
-        Switch log_;
+    //- Standard OpenFOAM object registry
+//    const objectRegistry& obr_;
 
-        //- Name of pressure field
-        word fieldName_;
+    //- Switch to send output to Info as well as to file
+//    Switch log_;
 
-        //
-        scalar Wgamma_;
+    //
+    label nLines;
 
-        //
-        scalar WR_;
+    //
+    label nPoints;
 
+    //
+    point xs;
 
-        //- Velocity magnitude value at infinity
-        scalar infVelMag_;
+    //
+    point xe;
+
+    //
+    point xn;
+
+    //
+    vector infVel_;
+
+    //
+    scalar Wgamma_;
+
+    //
+    scalar WR_;
+
+    //
+    scalar infT_;
+
+    //
+    scalar length_;
+
+    //- Name of pressure field
+    word fieldName_;
+
+    //- Velocity magnitude value at infinity
+    scalar infVelMag_;
+
+    //
+    scalar beta_;
+
+    //
+//    scalar M_ef;
+
+    //
+//    scalar beta_ef;
 
 private:
 
-        //- Disallow default bitwise copy construct
-        farFieldPressure(const farFieldPressure&);
-        virtual void pointDistr(const farFieldPressure&);
-        //- Disallow default bitwise assignment
-        void operator=(const farFieldPressure&);
-        
+    //- Disallow default bitwise copy construct
+    farFieldPressure(const farFieldPressure&);
 
+    //- Disallow default bitwise assignment
+    void operator=(const farFieldPressure&);
 
+    //- Write geometry only
+    void writeGeometry() const;
 
-        //- Write geometry only
-//        void writeGeometry() const;
-
-
-        //- If the soundPressureSampler file has not been created create it
-        void makeFile();
-
+    //- If the soundPressureSampler file has not been created create it
+//    void makeFile();
 
 public:
 
@@ -175,69 +206,82 @@ public:
 
     // Constructors
 
-        //- Construct from Time and dictionary
-        farFieldPressure
-        (
-            const word& name,
-            const Time& time,
-            const dictionary& dict
-        );
-
-        //- Construct for given objectRegistry and dictionary
-        //  allow the possibility to load fields from files
-        farFieldPressure
-        (
-            const word& name,
-            const objectRegistry&,
-            const fvMesh&,
-            const dictionary& dict
-        );
+    //- Construct from Time and dictionary
+    farFieldPressure
+    (
+        const word& name,
+        const Time& time,
+        const dictionary& dict
+    );
 
     //- Destructor
 
-        virtual ~farFieldPressure();
+    virtual ~farFieldPressure();
 
     // Member Functions
 
-        //- Read the farFieldPressure data
-        virtual bool read(const dictionary&);
+    //
+    virtual const word& name() const
+    {
+        return name_;
+    }
 
-        // 
-        virtual pointField evaluate();
+    //- Read the farFieldPressure data
+    virtual bool read(const Foam::dictionary&);
 
-        //- Called when time was set at the end of time
-        virtual void timeSet();
+    //- Execute, currently does nothing
+    virtual bool execute();
 
-        //- Write the farFieldPressure
-        virtual bool write();
+    //- Execute at the final time-loop, currently does nothing
+//    virtual bool end();
 
-        //
-        scalar infVelMag (vector , const scalar, const scalar , const scalar );
+    // Write farFieldPessure
+    virtual bool write();
 
-        //
-        scalar beta(const scalar, const scalar, const scalar, const scalar );
+    //
+//    virtual bool needsUpdate() const;
+//    virtual bool update();
 
+//    void calcWhithamFunc();
 
-        //
-        scalar dSeqByX(const vector , const scalar , const vector , const vector);
-        
-        //
-        scalar new_dSeqByX(const scalar, const scalar, const scalar, const scalar, const scalar, const scalar);
+    //
+    scalar infVelMag (vector);
 
-        //
-        scalar PhiOfEta( scalar );
+    //
+    scalar beta(const scalar, const scalar, const scalar, const scalar );
 
-        //
-        scalar  Foam::farFieldPressure::FoEta();
+    //
+    scalar dSeqBydX(const vector , const scalar , const vector , const vector, label);
 
-        //
-        scalar kCoef();
+    //
+    scalar new_dSeqBydX(const scalar, const scalar, const scalar, const scalar, const scalar, const scalar);
 
-        //
-        scalar k1Coef();
+    //
+    List<Foam::scalar> PhiOfEta( point, point, label, List<scalar>);
 
-        //
-        scalar deltaP();
+    //
+    List<Foam::scalar> FofEta(label, List<scalar>, point, point);
+
+    //
+    Foam::scalar getL( scalar , scalar , scalar , scalar );
+
+    //
+    Foam::scalar getYforce();
+
+    //
+    Foam::scalar k1Coef( scalar , scalar , scalar , scalar , scalar , scalar, scalar );
+
+    //
+    List<Foam::scalar> deltaP( label , scalar , List<scalar> );
+
+/*
+    //
+    scalar kCoef();
+
+    //
+    scalar k2Coef();
+*/
+
 };
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
@@ -245,6 +289,7 @@ public:
 } // End namespace Foam
 
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
 
 #ifdef NoRepository
     #include "farFieldSonicBoomTemplates.C"

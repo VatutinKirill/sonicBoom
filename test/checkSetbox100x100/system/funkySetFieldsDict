@@ -1,0 +1,26 @@
+/*--------------------------------*- C++ -*----------------------------------*\
+| =========                 |                                                 |
+| \\      /  F ield         | OpenFOAM: The Open Source CFD Toolbox           |
+|  \\    /   O peration     | Version:  v1912                                 |
+|   \\  /    A nd           | Website:  www.openfoam.com                      |
+|    \\/     M anipulation  |                                                 |
+\*---------------------------------------------------------------------------*/
+FoamFile
+{
+    version     2.0;
+    format      ascii;
+    class       dictionary;
+    object      funkySetFieldsDict;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+ expressions
+ (
+	velocityField
+	{
+		field U;
+		expression "vector( 100.0, 10.0, 0.0 ) + 2.0*vector( 0.0, 0.0, 1.0 )*mag(pos().z) + 2.0*vector( 1.0, 0.0 , 0.0 )*mag(pos().x)";
+        }
+ );
+
+// ************************************************************************* //

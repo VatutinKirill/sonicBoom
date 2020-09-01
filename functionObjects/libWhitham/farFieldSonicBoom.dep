@@ -1,3 +1,0 @@
-$(OBJECTS_DIR)/farFieldSonicBoom.o: farFieldSonicBoom.dep
-farFieldSonicBoom.dep: farFieldSonicBoom.C
-farFieldSonicBoom.dep: farFieldSonicBoom.H

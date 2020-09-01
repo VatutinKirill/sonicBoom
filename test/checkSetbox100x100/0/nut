@@ -1,0 +1,41 @@
+FoamFile
+{
+    version     1912;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      nut;
+}
+
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [0 2 -1 0 0 0 0];
+
+internalField   uniform 0;
+
+boundaryField
+{
+    "(inlet|bottom)"
+    {
+        type            fixedValue;
+        value $internalField;
+    }
+    "(outlet|top)"
+    {
+        type            calculated;
+        value           uniform 0;
+    }
+
+    "(wing|tail)"
+    {
+        type            nutkWallFunction;
+        value           uniform 0;
+    }
+
+    "(front|back)"
+    {
+        type            slip;
+    }
+}
+// ************************************************************************* //
+

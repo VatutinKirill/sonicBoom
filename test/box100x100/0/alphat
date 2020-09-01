@@ -1,0 +1,43 @@
+FoamFile
+{
+    version     1912;
+    format      ascii;
+    class       volScalarField;
+    location    "0";
+    object      alphat;
+}
+// * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
+
+dimensions      [1 -1 -1 0 0 0 0];
+
+internalField   uniform 0;
+
+boundaryField
+{
+    "(inlet|bottom)"
+    {
+        type            calculated;
+        value           uniform 0;
+    }
+
+    "(outlet|top)"
+    {
+        type            calculated;
+        value           uniform 0;
+    }
+
+    "(wing|tail)"
+    {
+        type            compressible::alphatWallFunction;
+        Prt             0.85;
+        value           uniform 0;
+    }
+
+    "(sym|back)"
+    {
+        type            slip;
+    }
+}
+
+// ************************************************************************* //
+
