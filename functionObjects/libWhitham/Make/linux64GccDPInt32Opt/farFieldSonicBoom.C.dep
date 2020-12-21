@@ -722,6 +722,13 @@ $(WM_PROJECT_DIR)/src/sampling/lnInclude/sampledSet.H \
 $(WM_PROJECT_DIR)/src/fileFormats/lnInclude/coordSet.H \
 $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/IOobjectList.H \
 $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/IOobjectListTemplates.C \
+$(WM_PROJECT_DIR)/src/functionObjects/forces/lnInclude/forces.H \
+$(WM_PROJECT_DIR)/src/finiteVolume/lnInclude/fvMeshFunctionObject.H \
+$(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/regionFunctionObject.H \
+$(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/regionFunctionObjectTemplates.C \
+$(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/writeFile.H \
+$(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/writeFileTemplates.C \
+$(WM_PROJECT_DIR)/src/meshTools/lnInclude/cartesianCS.H \
 farFieldSonicBoomTemplates.C \
 $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/argList.H \
 $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/parRun.H \
@@ -755,5 +762,6 @@ $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/PatchToolsMatch.C \
 $(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/addToRunTimeSelectionTable.H \
 $(WM_PROJECT_DIR)/src/sampling/lnInclude/uniformSet.H \
 $(WM_PROJECT_DIR)/src/meshTools/lnInclude/meshSearch.H \
+$(WM_PROJECT_DIR)/src/OpenFOAM/lnInclude/IFstream.H \
 
 

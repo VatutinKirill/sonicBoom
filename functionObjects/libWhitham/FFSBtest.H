@@ -24,6 +24,7 @@ License
 Class
     Foam::FFPtests
 
+
 Description
 
     Module for testing Whitham library.

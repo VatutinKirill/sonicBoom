@@ -66,6 +66,8 @@ SourceFiles
 #include "wordReList.H"
 #include "IOobjectList.H"
 
+
+#include "forces.H"
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 
 namespace Foam
@@ -83,6 +85,12 @@ class farFieldPressure
 :
     public functionObject
 {
+
+   //- Center of surface for sampling
+//   vector c_;
+   
+   //- Force acting on patch
+//   tdPrimitive<vector> F_;
 
 private:
 
@@ -121,7 +129,7 @@ protected:
 
     //- Const reference to fvMesh
     const fvMesh& mesh_;
-    
+
     //
 //    const bool loadFromFiles;
 
@@ -156,34 +164,59 @@ protected:
     point xn;
 
     //
-    vector infVel_;
+    scalar yn;
 
     //
-    scalar Wgamma_;
+    scalar H;
 
     //
-    scalar WR_;
+    vector infVel;
 
     //
-    scalar infT_;
+    vector TotalForce;
 
     //
-    scalar length_;
+    scalar Wgamma;
 
+    //
+    scalar WR;
+
+    //
+    scalar infT;
+
+    //
+    scalar length;
+
+    //
+    scalar AoA;
     //- Name of pressure field
-    word fieldName_;
+//    word fieldName_;
 
     //- Velocity magnitude value at infinity
-    scalar infVelMag_;
+    scalar infVelMagVal;
 
     //
-    scalar beta_;
+    scalar betaVal;
 
     //
-//    scalar M_ef;
+    scalar M_ef;
 
     //
-//    scalar beta_ef;
+    scalar beta_ef;
+
+    //
+    scalar rho_00;
+
+    //
+    scalar rho_0;
+
+    //
+    scalar rho_inf;
+
+    //
+    scalar gamma_bar;
+
+
 
 private:
 
@@ -196,8 +229,8 @@ private:
     //- Write geometry only
     void writeGeometry() const;
 
-    //- If the soundPressureSampler file has not been created create it
-//    void makeFile();
+    //- If the farFieldPressure file has not been created create it
+    void makeFile(List<scalar> res_dp);
 
 public:
 
@@ -233,28 +266,22 @@ public:
     virtual bool execute();
 
     //- Execute at the final time-loop, currently does nothing
-//    virtual bool end();
+    //    virtual bool end();
 
     // Write farFieldPessure
     virtual bool write();
 
     //
-//    virtual bool needsUpdate() const;
-//    virtual bool update();
-
-//    void calcWhithamFunc();
+    scalar infVelMag ();
 
     //
-    scalar infVelMag (vector);
-
-    //
-    scalar beta(const scalar, const scalar, const scalar, const scalar );
+    scalar beta( );
 
     //
     scalar dSeqBydX(const vector , const scalar , const vector , const vector, label);
 
     //
-    scalar new_dSeqBydX(const scalar, const scalar, const scalar, const scalar, const scalar, const scalar);
+    scalar new_dSeqBydX( const scalar);
 
     //
     List<Foam::scalar> PhiOfEta( point, point, label, List<scalar>);
@@ -269,7 +296,7 @@ public:
     Foam::scalar getYforce();
 
     //
-    Foam::scalar k1Coef( scalar , scalar , scalar , scalar , scalar , scalar, scalar );
+    Foam::scalar k1Coef( scalar);
 
     //
     List<Foam::scalar> deltaP( label , scalar , List<scalar> );
